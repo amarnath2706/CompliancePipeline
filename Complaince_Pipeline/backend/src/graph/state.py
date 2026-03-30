@@ -10,3 +10,14 @@ class ComplianceResult(TypedDict):
     details: Optional[str]
 
 #define the global graph state
+class VideoAuditState(TypedDict):
+    """It defines the data schema for langgraph execution content"""
+    #input parameters
+    video_url : str
+    video_id: str
+
+    #ingestion and the extracted data
+    local_file_path : Optional[str]
+    video_metadata : Dict[str, Any] #example {'duration': 120, 'format': 'mp4', 'resolution': '1920x1080'}
+    transcript : Optional[str] #fully extracted speech to text
+    ocr_text : List[str]

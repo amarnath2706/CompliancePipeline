@@ -2,7 +2,7 @@ import operator
 from typing import Annotated, Any, Dict, List, Optional , TypedDict
 
 #define the schema for a single complaince result
-class ComplianceResult(TypedDict):
+class ComplianceIssue(TypedDict):
     category: str
     description: str
     severity: str
@@ -21,3 +21,12 @@ class VideoAuditState(TypedDict):
     video_metadata : Dict[str, Any] #example {'duration': 120, 'format': 'mp4', 'resolution': '1920x1080'}
     transcript : Optional[str] #fully extracted speech to text
     ocr_text : List[str]
+
+    #Analysis output
+    complaince_result : Annotated[List[ComplianceIssue], operator.add]
+
+    #final delivarables:
+    final_status : str  # pass|fail
+    final_report : str #markdown format
+
+    

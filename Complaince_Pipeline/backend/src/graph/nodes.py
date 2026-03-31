@@ -73,7 +73,7 @@ def index_video_node(state: VideoAuditState) -> Dict[str,Any]:
     
 
 #Node 2: Compliance Checker or Auditor
-def audio_content_node(state:VideoAuditState) -> Dict[str,Any]:
+def audit_content_node(state:VideoAuditState) -> Dict[str,Any]:
     """
     This node performs the "Retrieval augmented generation" to audit the content against the compliance requirements(brand video).
     """
@@ -110,7 +110,7 @@ def audio_content_node(state:VideoAuditState) -> Dict[str,Any]:
     query_text = f"{transcript} {', '.join(ocr_text)}"
     #perform similarity search on the vector database to fetch the relevant documents
     docs = vector_store.similarity_search(query_text, k=3)
-    retrieved_rules = "\n\n",join([doc.page_content for doc in docs])
+    retrieved_rules = "\n\n".join([doc.page_content for doc in docs])
 
     #Define the system prompt
     system_prompt = f"""

@@ -102,6 +102,7 @@ def index_documents():
             text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
             splits = text_splitter.split_documents(raw_docs)
             for split in splits:
+                #It stamps each chunk with the file name    
                 split.metadata["source"] = os.path.basename(pdf_path) #add source metadata to each chunk
             all_splits.extend(splits)
             logger.info(f"File {os.path.basename(pdf_path)} processed successfully with {len(splits)} chunks created.")
@@ -128,4 +129,4 @@ def index_documents():
             logger.warning("No document chunks were created from the PDF files. Please check the PDF files and try again.")
 
 if __name__ == "__main__":
-    index_docs()
+    index_documents()

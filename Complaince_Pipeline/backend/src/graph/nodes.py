@@ -22,6 +22,7 @@ logging.basicConfig(level=logging.INFO)
 
 #Build the node
 #Node 1 : Indexer
+#This function is responsible for coverting the video to text
 def index_video_node(state: VideoAuditState) -> Dict[str,Any]:
     """This is going to download the youtube video from the url.
        Then it uploads to the Azure video indexer 
@@ -103,3 +104,61 @@ def audio_content_node(state:VideoAuditState) -> Dict[str,Any]:
         index_name = os.getenv("AZURE_SEARCH_INDEX_NAME"),
         embedding_function=embeddings.embed_query 
     )
+
+    #RAG implementation
+    ocr_text = state.get("ocr_text",[])
+    query_text = f"{transcript} {', '.join(ocr_text)}"
+    #perform similarity search on the vector database to fetch the relevant documents
+    docs = vector_store.similarity_search(query_text, k=3)
+    retrieved_rules = "\n\n",join([doc.page_content for doc in docs])
+
+    #Define the system prompt
+    system_prompt = f"""
+        you are a senior brand compliance auditor.
+        OFFICIAL REGULATORY RULES TO FOLLOW:
+        {retrieved_rules}
+        INSTRUCTIONS:
+        1. Analyze the transcript and the OCR text below.
+        2. Identify any vioalations of the rules.
+        3. Return strictly JSON in the following format:
+        {{
+        "complaince_results":[
+        {{
+        "category": "Claim Validation",
+        "severity": "CRITICAL",
+        "description": "Explanation of the violation",
+        }}
+        ],
+        "status" : "FAIL",
+        "final_report":"Summary of findings..."
+        }}
+        If no violations are found, set "status" to "PASS" and "complaice_results" to []."""
+    user_message = f"""
+                  VIDEO_METADATA:{state.get('video_metadata',{})} 
+                  TRANSCRIPT: {transcript}
+                  ON-SCREEN TEXT(OCR): {ocr_text}
+         """
+    try:
+        response = llm.invoke([
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_message)
+        ])
+        content = response.content
+        #regular expression cleanup
+        if "```" in content:
+            content = re.search(r"```(?:json)?(.?)```",content,re.DOTALL).group(1)
+        audit_data = json.loads(content.strip())
+        return {
+            "complaince_results" : audit_data.get("compiance_results",[]),
+            "final_status" : audit_data.get("status","FAIL"),
+            "final_report" : audit_data.get("final_report","No report generated.")
+        }
+    except Exception as e:
+        logger.error(f"System Error in auditor node :{str(e)}")
+        #logging the raw response
+        logger.error(f"Raw LLM response : {response.content if 'response' in locals() else 'None'}")
+        return {
+            
+            "final_status": "FAIL",
+            "errors": [str(e)]
+        }

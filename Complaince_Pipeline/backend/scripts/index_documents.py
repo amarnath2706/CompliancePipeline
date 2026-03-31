@@ -83,3 +83,49 @@ def index_documents():
     
     #find PDF files in the data folder
     pdf_files = glob.glob(os.path.join(data_folder, "*.pdf"))
+    if not pdf_files:
+        logger.warning(f"No PDF files found in the data folder: {data_folder}. Please add some PDF files and try again.")
+    logger.info(f"Found {len(pdf_files)} PDF files in the data folder. Starting the indexing process : {[os.path.basename(f) for f in pdf_files]}")
+
+
+    all_splits = [] 
+
+    #process each PDF file
+    for pdf_path in pdf_files:
+        try:
+            logger.info(f"Processing file: {os.path.basename(pdf_path)}")
+            #load the document
+            loader = PyPDFLoader(pdf_path)
+            raw_docs = loader.load()
+
+            #split the document into chunks
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+            splits = text_splitter.split_documents(raw_docs)
+            for split in splits:
+                split.metadata["source"] = os.path.basename(pdf_path) #add source metadata to each chunk
+            all_splits.extend(splits)
+            logger.info(f"File {os.path.basename(pdf_path)} processed successfully with {len(splits)} chunks created.")
+
+        except Exception as e:
+            logger.error(f"Error processing file {os.path.basename(pdf_path)}: {str(e)}")
+            logger.error("Skipping this file and continuing with the next one.") 
+
+    #upload the chunks to vector database (Azure AI Search)
+        if all_splits:
+            #logger.info(f"Total {len(all_splits)} chunks to be uploaded to Azure AI Search.")
+            logger.info(f"Uploading {len(all_splits)} chunks to Azure AI Search Index '{index_name}'")
+            try:
+                #azure search accepts batches automatically via this method
+                vector_store.add_documents(all_splits)
+                logger.info("="*60)
+                logger.info("Indexing completed successfully! and Knowledge base is ready for the auditing process.")
+                logger.info(f"Total chunks indexed : {len(all_splits)}")
+                logger.info("="*60) 
+            except Exception as e:
+                logger.error(f"Error uploading document chunks to Azure AI Search: {str(e)}")
+                logger.error("Please check your Azure AI Search configuration and try again.")
+        else:
+            logger.warning("No document chunks were created from the PDF files. Please check the PDF files and try again.")
+
+if __name__ == "__main__":
+    index_docs()

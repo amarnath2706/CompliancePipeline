@@ -69,3 +69,37 @@ def index_video_node(state: VideoAuditState) -> Dict[str,Any]:
             "transcript": "",
             "ocr_text": [],
         }
+    
+
+#Node 2: Compliance Checker or Auditor
+def audio_content_node(state:VideoAuditState) -> Dict[str,Any]:
+    """
+    This node performs the "Retrieval augmented generation" to audit the content against the compliance requirements(brand video).
+    """
+    logger.info("----[Node:Auditor] querying knowledgebase and LLM")
+    transcript = state.get("transcript","")
+    if not transcript:
+        logger.warning("No transcript available for auditing, So we are skipping the auditing process.")
+        return {
+            #"complaince_result": [],
+            "final_status": "FAIL",
+            "final_report": "No transcript available for auditing because the video processing failed. Please check the errors for more details.",
+        }
+    #initialize azure clients
+    llm = AzureChatOpenAI(
+        azure_deployment= os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT"),
+        openai_api_version = os.getenv("AZURE_OPENAI_API_VERSION"),
+        temperature = 0.0
+    )
+
+    embeddings = AzureOpenAIEmbeddings(
+        azure_deployment="text-embedding-3-small",
+        openai_api_version = os.getenv("AZURE_OPENAI_API_VERSION"),
+    )
+
+    vector_store = AzureSearch(
+        azure_search_endpoint=os.getenv("AZURE_SEARCH_ENDPOINT"),
+        azure_search_key=os.getenv("AZURE_SEARCH_API_KEY"), 
+        index_name = os.getenv("AZURE_SEARCH_INDEX_NAME"),
+        embedding_function=embeddings.embed_query 
+    )

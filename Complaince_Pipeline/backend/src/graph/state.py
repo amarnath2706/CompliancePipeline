@@ -36,4 +36,5 @@ class VideoAuditState(TypedDict):
 
     #system observability
     #errors : API timeout, system level errors
+    #it stores the list of system level crashes under the tag "errors"
     errors : Annotated[List[str], operator.add]

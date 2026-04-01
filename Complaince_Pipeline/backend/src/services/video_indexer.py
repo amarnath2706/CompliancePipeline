@@ -68,12 +68,17 @@ class VideoIndexerService:
         #try:
         logger.info(f"Downloading video (Youtube video) from URL: {url}")
         ydl_opts = {
-            'format': 'best[ext=mp4]',
-            'outtmpl': output_path,
-            'quiet': True,
-            'oveerwrites': True,
-            #'no_warnings': True,
-        }
+            'format': 'best',
+            'outtmpl': output_path, #output template, it will save the video with the name temp_video.mp4 in the current directory.
+            'quiet': False,
+            #'oveerwrites': True,
+            'no_warnings': False,
+            #Add these extra options to handle potential issues with certain videos
+            'extractor-args': {'youtube': {'player_client': ['android','web']}},
+            'http_headers': { 
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+                
+                }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
